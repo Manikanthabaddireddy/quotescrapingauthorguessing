@@ -1,6 +1,6 @@
-from bs4 import BeautifulSoup
 import requests
 import random
+from bs4 import BeautifulSoup
 
 class QuoteScraper:
     BASE_URL = "http://quotes.toscrape.com/page/"
@@ -9,7 +9,6 @@ class QuoteScraper:
         self.num_pages = num_pages
 
     def scrape_quotes(self):
-        global all_quotes
         all_quotes = []
         for page_number in range(1, self.num_pages + 1):
             url = f"{self.BASE_URL}{page_number}/"
@@ -24,15 +23,14 @@ class QuoteScraper:
                     author = quote_element.find('small', class_='author').get_text()
                     author_link = quote_element.find('a', href=True)['href']
 
-                    # Extract the author's information
                     author_info = self.scrape_author_info(author_link)
 
                     quotes_data = {
                         'quote': quote,
                         'author': author,
-                        'author_link': 'http://quotes.toscrape.com' + author_link,
-                        'birth_date': author_info['birth_date'],
-                        'birth_location': author_info['birth_location']
+                        'author_link': f"http://quotes.toscrape.com{author_link}",
+                        'birth_date': author_info.get('birth_date'),
+                        'birth_location': author_info.get('birth_location')
                     }
 
                     all_quotes.append(quotes_data)
@@ -48,7 +46,6 @@ class QuoteScraper:
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
 
-            # Extract birth date and location
             birth_date = soup.find('span', class_='author-born-date').get_text()
             birth_location = soup.find('span', class_='author-born-location').get_text()
 
@@ -60,41 +57,39 @@ class QuoteScraper:
             print(f"Failed to retrieve author information. Status code: {response.status_code}")
         
         return author_info
+
     def guess_author(self):
         quotes = self.scrape_quotes()
-        if quotes:
+        if not quotes:
+            print("No quotes to guess from.")
+            return
+
+        for i in range(4):
             random_quote = random.choice(quotes)
             print("Randomly selected quote:")
             print(f"Quote Text: {random_quote['quote']}")
-            print(f"author: {random_quote['author']}")
-            N=0
-            while True:
-                while N<4:
-                    author=input("Enter guessed author [note : use only lower case]: ")
-                    if author ==random_quote["author"].lower():
-                        print("you guessed right")
-                        break
-                    else:
-                        if N==0:
-                            print("HINT: author Date of birth is: ",random_quote["birth_date"] ,'and',"location is:", random_quote["birth_location"])
-                            remaing=4-(N+1)
-                            print(f"You have only {remaing} guesse left ")
-                        else:
-                            print("HINT: author first letter is: ",random_quote["author"][0])
-                            remaing=4-(N+1)
-                            print(f"You have only {remaing} guesse left ")
-                            
-                    N+=1
-                player=input("if you want to continue say yes or no:")
-                if player!="yes":
-                    print("you lost the game")
-                
-            
-                
+            print(f"Author: {random_quote['author']}")
 
+            remaining_attempts = 4
+            while remaining_attempts > 0:
+                guessed_author = input("Enter guessed author (use only lowercase): ")
+                if guessed_author == random_quote["author"].lower():
+                    print("You guessed right!")
+                    break
+                else:
+                    remaining_attempts -= 1
+                    if remaining_attempts == 3:
+                        print(f"HINT: Author's date of birth is {random_quote['birth_date']} and location is {random_quote['birth_location']}.")
+                    elif remaining_attempts > 0:
+                        print(f"HINT: Author's first letter is {random_quote['author'][0]}.")
+                        print(f"You have {remaining_attempts} guess(es) left.")
             
-        else:
-            print("No quotes to guess from.")
+            if remaining_attempts == 0:
+                print(f"You ran out of guesses. The correct author was: {random_quote['author']}")
 
+            continue_game = input("Do you want to continue? (yes/no): ")
+            if continue_game.lower() != "yes":
+                print("Thanks for playing!")
+                break
 
 
